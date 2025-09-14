@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Chữ ký số RSA với Ngày sinh</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #2980b9;
+            border-left: 4px solid #3498db;
+            padding-left: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        table, th, td {
+            border: 1px solid #bdc3c7;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #ecf0f1;
+        }
+        input[type="date"], input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ecf0f1;
+            border-radius: 5px;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .char-table {
+            width: auto;
+            margin: 0 auto;
+        }
+        .char-table td {
+            min-width: 40px;
+        }
+        .result-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .valid {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .invalid {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .signature-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .verify-result {
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <h1>CHỮ KÝ SỐ RSA VỚI NGÀY SINH</h1>
+    
+    {% if error %}
+    <div class="error">
+        {{ error }}
+    </div>
+    {% endif %}
+    
+    <div class="info">
+        <strong>Hướng dẫn:</strong> Chọn ngày sinh để hệ thống tự động sinh hai số nguyên tố p và q gần với ngày sinh.
+        Sau đó nhập văn bản M (ví dụ: NGUYENVANA) và thực hiện ký hoặc xác thực.
+    </div>
+    
+    <div class="section">
+        <h2>SINH KHÓA TỪ NGÀY SINH</h2>
+        
+        <form method="POST" action="/generate">
+            <table>
+                <tr>
+                    <th>Tham số</th>
+                    <th>Giá trị</th>
+                </tr>
+                <tr>
+                    <td>Chọn ngày sinh:</td>
+                    <td><input type="date" name="birth_date" id="birth_date" required value="{{ birth_date }}"></td>
+                </tr>
+                <tr>
+                    <td>Văn bản M:</td>
+                    <td><input type="text" name="message" id="message" required value="{{ message }}"></td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <button type="submit">Sinh khóa từ ngày sinh</button>
+                    </td>
+                </tr>
+            </table>
+        </form>
+        
+        <table>
+            <tr>
+                <th>Tham số</th>
+                <th>Giá trị</th>
+            </tr>
+            <tr>
+                <td>Số nguyên tố P (gần ngày):</td>
+                <td id="p-value">{{ p if p else '' }}</td>
+            </tr>
+            <tr>
+                <td>Số nguyên tố Q (gần ngày):</td>
+                <td id="q-value">{{ q if q else '' }}</td>
+            </tr>
+            <tr>
+            <td>Khóa bí mật: </td>
+            <td>
+                <span id="private-key">
+                    {% if private_key %}
+                        {{ private_key[0] }}
+                    {% endif %}
+                </span>
+                <span id="private-key-hidden">*</span>
+                <label>
+                    <input type="checkbox" id="show-private"> Hiện
+                </label>
+            </td>
+            </tr>
+            <tr>
+                <td>Khóa công khai: </td>
+                <td id="public-key">
+                    {% if public_key %}
+                        {{ public_key[0] }}
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="section" id="sign-section" {% if not private_key %}style="display: none;"{% endif %}>
+        <h2>KÝ VĂN BẢN</h2>
+        
+        <form method="POST" action="/sign">
+            <table>
+                <tr>
+                    <td>Văn bản M:</td>
+                    <td><input type="text" name="message" required value="{{ message }}"></td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <button type="submit" {% if not private_key %}disabled{% endif %}>Ký văn bản</button>
+                    </td>
+                </tr>
+            </table>
+        </form>
+        
+        {% if signature %}
+        <div class="result-section">
+            <h3>Kết quả ký văn bản:</h3>
+            
+            <table class="char-table">
+                <tr>
+                    {% for char in message %}
+                    <td>{{ char }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td colspan="{{ message|length }}" style="border: none; border-bottom: 1px solid #bdc3c7;"></td>
+                </tr>
+                <tr>
+                    <td>M=</td>
+                    {% for num in message_numbers %}
+                    <td>{{ num }}</td>
+                    {% endfor %}
+                </tr>
+            </table>
+            
+            <p><strong>Chữ ký số:</strong> {{ signature }}</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="section" id="verify-section" {% if not public_key %}style="display: none;"{% endif %}>
+        <h2>XÁC THỰC CHỮ KÝ</h2>
+        
+        <form method="POST" action="/verify">
+            <table>
+                <tr>
+                    <td>Chữ ký (dạng số, cách nhau bằng dấu phẩy):</td>
+                    <td>
+                        <input type="text" name="verify_signature" class="signature-input" 
+                               {% if signature %}value="{{ signature }}"{% endif %}>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <button type="submit" {% if not public_key %}disabled{% endif %}>Xác thực chữ ký</button>
+                    </td>
+                </tr>
+            </table>
+        </form>
+        
+        {% if decrypted_message is not none %}
+        <div class="verify-result">
+            <h3>Kết quả xác thực:</h3>
+            
+            <table class="char-table">
+                <tr>
+                    {% for char in decrypted_message %}
+                    <td>{{ char }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td colspan="{{ decrypted_message|length }}" style="border: none; border-bottom: 1px solid #bdc3c7;"></td>
+                </tr>
+                <tr>
+                    <td>M=</td>
+                    {% for char in decrypted_message %}
+                    <td>{{ char | ord }}</td>
+                    {% endfor %}
+                </tr>
+            </table>
+            
+            <p><strong>Văn bản giải mã từ chữ ký:</strong> {{ decrypted_message }}</p>
+            
+            {% if verification_result is not none %}
+                {% if verification_result %}
+                    <div class="valid">Chữ ký HỢP LỆ (khớp với văn bản gốc)</div>
+                {% else %}
+                    <div class="invalid">Chữ ký KHÔNG HỢP LỆ (không khớp với văn bản gốc)</div>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Kiểm tra và ẩn/hiện các phần dựa trên sự tồn tại của khóa
+        function checkKeys() {
+            const privateKey = document.getElementById('private-key').textContent.trim();
+            const publicKey = document.getElementById('public-key').textContent.trim();
+            
+            const signSection = document.getElementById('sign-section');
+            const verifySection = document.getElementById('verify-section');
+            
+            if (privateKey) {
+                signSection.style.display = 'block';
+            } else {
+                signSection.style.display = 'none';
+            }
+            
+            if (publicKey) {
+                verifySection.style.display = 'block';
+            } else {
+                verifySection.style.display = 'none';
+            }
+        }
+        
+        // Chạy khi trang tải xong
+        document.addEventListener('DOMContentLoaded', function() {
+            checkKeys();
+            const checkbox = document.getElementById("show-private");
+            const keySpan = document.getElementById("private-key");
+            const hiddenSpan = document.getElementById("private-key-hidden");
+
+            // mặc định: ẩn giá trị, chỉ hiện dấu *
+            if (keySpan.textContent.trim() !== "") {
+                keySpan.style.display = "none";
+                hiddenSpan.style.display = "inline";
+            }
+
+            checkbox.addEventListener("change", function() {
+                if (this.checked) {
+                    keySpan.style.display = "inline";
+                    hiddenSpan.style.display = "none";
+                } else {
+                    keySpan.style.display = "none";
+                    hiddenSpan.style.display = "inline";
+                }
+            });
+        });
+    </script>
+</body>
+</html>
